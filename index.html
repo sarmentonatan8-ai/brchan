@@ -1,0 +1,431 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>BRchan</title>
+
+  <style>
+  
+:root {
+  --bg: #ffe;
+  --panel: #f0e0d6;
+  --post: #f0e0d6;
+  --text: #000;
+  --muted: #707070;
+  --accent: #800000;
+  --border: #d9bfb7;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  padding: 8px;
+  background: var(--bg);
+  color: #000;
+  font: 13px Arial, Helvetica, sans-serif;
+}
+
+header {
+  padding: 10px 0 14px;
+  text-align: center;
+  background: transparent;
+  border: 0;
+}
+
+header h1 {
+  margin: 0;
+  color: #af0a0f;
+  font-size: 32px;
+  font-weight: bold;
+}
+
+header p {
+  margin: 4px 0;
+  color: #800000;
+  font-size: 12px;
+}
+
+nav {
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 6px;
+  margin: 0 auto 12px;
+  background: transparent;
+  border-top: 1px solid #d9bfb7;
+  border-bottom: 1px solid #d9bfb7;
+}
+
+button {
+  cursor: pointer;
+  padding: 4px 8px;
+  border: 1px solid #aaa;
+  border-radius: 0;
+  background: #eee;
+  color: #000;
+  font: 12px Arial, sans-serif;
+}
+
+button:hover {
+  background: #ddd;
+}
+
+nav button.active,
+.submit {
+  background: #eee;
+  color: #000;
+  border: 1px solid #999;
+  font-weight: normal;
+}
+
+main {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding: 0;
+}
+
+.board-title {
+  margin: 10px 0;
+  color: #af0a0f;
+  text-align: center;
+  font-size: 22px;
+}
+
+.description {
+  margin: 10px 0 16px;
+  color: #800000;
+  text-align: center;
+  font-size: 12px;
+}
+
+.composer {
+  width: min(520px, 100%);
+  margin: 0 auto 18px;
+  padding: 10px;
+  background: #f0e0d6;
+  border: 1px solid #d9bfb7;
+  border-radius: 0;
+}
+
+textarea {
+  display: block;
+  width: 100%;
+  min-height: 65px;
+  resize: vertical;
+  padding: 5px;
+  background: #fff;
+  color: #000;
+  border: 1px solid #aaa;
+  border-radius: 0;
+  font: 13px Arial, sans-serif;
+}
+
+.composer button {
+  margin-top: 6px;
+}
+
+.post {
+  display: table;
+  max-width: 100%;
+  margin: 8px 0;
+  padding: 8px;
+  background: #f0e0d6;
+  border: 0;
+  border-radius: 0;
+}
+
+.meta {
+  margin-bottom: 5px;
+  color: #117743;
+  font-size: 12px;
+}
+
+.message {
+  color: #000;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+
+.reply {
+  margin: 8px 0 0 12px;
+  padding: 8px;
+  background: #e6d5cb;
+  border: 0;
+  border-left: 2px solid #d9bfb7;
+}
+
+.reply-form {
+  margin-top: 8px;
+}
+
+.reply-form textarea {
+  min-height: 45px;
+}
+
+.reply-form button {
+  margin-top: 5px;
+}
+
+.empty {
+  padding: 18px 5px;
+  color: #800000;
+  text-align: center;
+}
+
+footer {
+  margin-top: 25px;
+  padding: 10px;
+  color: #800000;
+  text-align: center;
+  font-size: 11px;
+  border-top: 1px solid #d9bfb7;
+}
+
+@media (max-width: 480px) {
+  body {
+    padding: 4px;
+  }
+
+  header h1 {
+    font-size: 28px;
+  }
+
+  .post {
+    width: 100%;
+  }
+}
+  </style>
+</head>
+
+<body>
+  <header>
+    <h1>BRchan</h1>
+    <p>Um imageboard brasileiro experimental</p>
+  </header>
+
+  <nav id="boards">
+    <button data-board="b" class="active">/b/ Geral</button>
+    <button data-board="pol">/pol/ Política</button>
+    <button data-board="tech">/tech/ Tecnologia</button>
+  </nav>
+
+  <main>
+    <h2 class="board-title" id="boardTitle">/b/ — Geral</h2>
+    <p class="description" id="description">
+      Discussões gerais, memes e assuntos aleatórios.
+    </p>
+
+    <section class="composer">
+      <textarea id="message"
+        maxlength="2000"
+        placeholder="Escreva uma publicação anônima..."></textarea>
+      <button class="submit" id="publish">Publicar tópico</button>
+    </section>
+
+    <section id="posts"></section>
+  </main>
+
+  <footer>
+    BRchan — protótipo experimental.
+    Não publique dados pessoais ou conteúdo ilegal.
+  </footer>
+
+  <script>
+    const boardInfo = {
+      b: {
+        title: "/b/ — Geral",
+        description: "Discussões gerais, memes e assuntos aleatórios."
+      },
+      pol: {
+        title: "/pol/ — Política",
+        description: "Debates políticos e sociais com respeito às regras."
+      },
+      tech: {
+        title: "/tech/ — Tecnologia",
+        description: "Programação, Linux, hardware e informática."
+      }
+    };
+
+    let currentBoard = "b";
+    let posts = [];
+
+    try {
+      posts = JSON.parse(
+        localStorage.getItem("brchan-posts") || "[]"
+      );
+
+      if (!Array.isArray(posts)) posts = [];
+    } catch {
+      posts = [];
+    }
+
+    const message = document.getElementById("message");
+    const postsArea = document.getElementById("posts");
+
+    function savePosts() {
+      try {
+        localStorage.setItem(
+          "brchan-posts",
+          JSON.stringify(posts)
+        );
+        return true;
+      } catch {
+        alert("Não foi possível salvar os dados neste navegador.");
+        return false;
+      }
+    }
+
+    function makePost(board, text, parent = null) {
+      return {
+        id: Date.now().toString(36) +
+            Math.random().toString(36).slice(2, 8),
+        board,
+        text,
+        parent,
+        date: new Date().toLocaleString("pt-BR")
+      };
+    }
+
+    function render() {
+      document.getElementById("boardTitle").textContent =
+        boardInfo[currentBoard].title;
+
+      document.getElementById("description").textContent =
+        boardInfo[currentBoard].description;
+
+      document.querySelectorAll("#boards button").forEach(button => {
+        button.classList.toggle(
+          "active",
+          button.dataset.board === currentBoard
+        );
+      });
+
+      postsArea.replaceChildren();
+
+      const threads = posts.filter(post =>
+        post.board === currentBoard && post.parent === null
+      );
+
+      if (threads.length === 0) {
+        const empty = document.createElement("div");
+        empty.className = "empty";
+        empty.textContent =
+          "Nenhum tópico ainda. Seja o primeiro a publicar.";
+        postsArea.append(empty);
+      }
+
+      threads.slice().reverse().forEach(post => {
+        const card = document.createElement("article");
+        card.className = "post";
+
+        const meta = document.createElement("div");
+        meta.className = "meta";
+        meta.textContent = "Anônimo · " + post.date;
+
+        const content = document.createElement("div");
+        content.className = "message";
+        content.textContent = post.text;
+
+        const replies = posts.filter(reply =>
+          reply.parent === post.id &&
+          reply.board === currentBoard
+        );
+
+        card.append(meta, content);
+
+        replies.forEach(reply => {
+          const box = document.createElement("div");
+          box.className = "reply";
+
+          const replyMeta = document.createElement("div");
+          replyMeta.className = "meta";
+          replyMeta.textContent = "Anônimo · " + reply.date;
+
+          const replyText = document.createElement("div");
+          replyText.className = "message";
+          replyText.textContent = reply.text;
+
+          box.append(replyMeta, replyText);
+          card.append(box);
+        });
+
+        const form = document.createElement("div");
+        form.className = "reply-form";
+
+        const input = document.createElement("textarea");
+        input.maxLength = 1000;
+        input.placeholder = "Responder a este tópico...";
+
+        const button = document.createElement("button");
+        button.textContent = "Responder";
+
+        button.addEventListener("click", () => {
+          const text = input.value.trim();
+
+          if (!text) {
+            alert("Escreva uma resposta primeiro.");
+            return;
+          }
+
+          if (posts.length >= 500) {
+            alert("Limite local de publicações atingido.");
+            return;
+          }
+
+          posts.push(makePost(currentBoard, text, post.id));
+
+          if (savePosts()) {
+            render();
+          } else {
+            posts.pop();
+          }
+        });
+
+        form.append(input, button);
+        card.append(form);
+        postsArea.append(card);
+      });
+    }
+
+    document.querySelectorAll("#boards button").forEach(button => {
+      button.addEventListener("click", () => {
+        currentBoard = button.dataset.board;
+        render();
+      });
+    });
+
+    document.getElementById("publish").addEventListener("click", () => {
+      const text = message.value.trim();
+
+      if (!text) {
+        alert("Escreva algo antes de publicar.");
+        return;
+      }
+
+      if (posts.length >= 500) {
+        alert("Limite local de publicações atingido.");
+        return;
+      }
+
+      posts.push(makePost(currentBoard, text));
+
+      if (savePosts()) {
+        message.value = "";
+        render();
+      } else {
+        posts.pop();
+      }
+    });
+
+    render();
+  </script>
+</body>
+</html>
+
