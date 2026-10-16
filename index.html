@@ -237,7 +237,12 @@ footer {
     Não publique dados pessoais ou conteúdo ilegal.
   </footer>
 
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
+    const SUPABASE_URL = "https://wppqyomxesgijyohpbcf.supabase.co";
+    const SUPABASE_KEY = "sb_publishable_NjwL-TpM_sTxplH6svNoEg_hvCGUt_Z";
+    const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
     const boardInfo = {
       b: {
         title: "/b/ — Geral",
@@ -255,42 +260,65 @@ footer {
 
     let currentBoard = "b";
     let posts = [];
-
-    try {
-      posts = JSON.parse(
-        localStorage.getItem("brchan-posts") || "[]"
-      );
-
-      if (!Array.isArray(posts)) posts = [];
-    } catch {
-      posts = [];
-    }
+    let loading = false;
 
     const message = document.getElementById("message");
     const postsArea = document.getElementById("posts");
 
-    function savePosts() {
+    function formatDate(value) {
+      return new Date(value).toLocaleString("pt-BR");
+    }
+
+    async function loadPosts(showError = true) {
+      if (loading) return;
+      loading = true;
+
       try {
-        localStorage.setItem(
-          "brchan-posts",
-          JSON.stringify(posts)
-        );
-        return true;
-      } catch {
-        alert("Não foi possível salvar os dados neste navegador.");
-        return false;
+        const { data, error } = await db
+          .from("posts")
+          .select("id, board, parent_id, content, created_at")
+          .order("created_at", { ascending: true });
+
+        if (error) throw error;
+
+        posts = data.map(row => ({
+          id: String(row.id),
+          board: row.board,
+          text: row.content,
+          parent: row.parent_id === null
+            ? null
+            : String(row.parent_id),
+          date: formatDate(row.created_at)
+        }));
+
+        render();
+      } catch (error) {
+        console.error("Erro ao carregar publicações:", error);
+        if (showError) {
+          alert("Não foi possível carregar as publicações. Verifique a conexão e as permissões do Supabase.");
+        }
+      } finally {
+        loading = false;
       }
     }
 
-    function makePost(board, text, parent = null) {
-      return {
-        id: Date.now().toString(36) +
-            Math.random().toString(36).slice(2, 8),
+    async function createPost(board, text, parent = null) {
+      const payload = {
         board,
-        text,
-        parent,
-        date: new Date().toLocaleString("pt-BR")
+        content: text,
+        parent_id: parent === null ? null : Number(parent)
       };
+
+      const { error } = await db.from("posts").insert(payload);
+
+      if (error) {
+        console.error("Erro ao publicar:", error);
+        alert("Não foi possível publicar: " + error.message);
+        return false;
+      }
+
+      await loadPosts();
+      return true;
     }
 
     function render() {
@@ -333,12 +361,12 @@ footer {
         content.className = "message";
         content.textContent = post.text;
 
+        card.append(meta, content);
+
         const replies = posts.filter(reply =>
           reply.parent === post.id &&
           reply.board === currentBoard
         );
-
-        card.append(meta, content);
 
         replies.forEach(reply => {
           const box = document.createElement("div");
@@ -366,7 +394,7 @@ footer {
         const button = document.createElement("button");
         button.textContent = "Responder";
 
-        button.addEventListener("click", () => {
+        button.addEventListener("click", async () => {
           const text = input.value.trim();
 
           if (!text) {
@@ -374,18 +402,14 @@ footer {
             return;
           }
 
-          if (posts.length >= 500) {
-            alert("Limite local de publicações atingido.");
-            return;
+          button.disabled = true;
+          const success = await createPost(currentBoard, text, post.id);
+
+          if (success) {
+            input.value = "";
           }
 
-          posts.push(makePost(currentBoard, text, post.id));
-
-          if (savePosts()) {
-            render();
-          } else {
-            posts.pop();
-          }
+          button.disabled = false;
         });
 
         form.append(input, button);
@@ -401,7 +425,7 @@ footer {
       });
     });
 
-    document.getElementById("publish").addEventListener("click", () => {
+    document.getElementById("publish").addEventListener("click", async () => {
       const text = message.value.trim();
 
       if (!text) {
@@ -409,22 +433,27 @@ footer {
         return;
       }
 
-      if (posts.length >= 500) {
-        alert("Limite local de publicações atingido.");
+      if (text.length > 4000) {
+        alert("A publicação deve ter no máximo 4000 caracteres.");
         return;
       }
 
-      posts.push(makePost(currentBoard, text));
+      const button = document.getElementById("publish");
+      button.disabled = true;
 
-      if (savePosts()) {
+      const success = await createPost(currentBoard, text);
+
+      if (success) {
         message.value = "";
-        render();
-      } else {
-        posts.pop();
       }
+
+      button.disabled = false;
     });
 
-    render();
+    loadPosts();
+
+    // Atualiza a lista periodicamente para buscar publicações novas.
+    setInterval(() => loadPosts(false), 15000);
   </script>
 </body>
 </html>
